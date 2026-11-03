@@ -1,0 +1,30 @@
+# Local environments and generated Python files
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Local credentials and environment configuration
+AnyDesk Password.txt
+.env
+.env.*
+!.env.example
+servo_controller/settings.json
+
+# Generated logs
+*.log
+
+# Experimental data/results stay local; retain the folder guide
+/Experiments/*
+!/Experiments/EXPERIMENTS_README.md
+
+# This index describes external equipment manuals absent from this folder
+/Manuals/README_Manuals_Index.md
+
+# Editor and operating-system files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+Desktop.ini

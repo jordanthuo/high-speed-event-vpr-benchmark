@@ -1,0 +1,7 @@
+minimalmodbus>=2.1,<3
+pyserial>=3.5,<4
+labjack-ljm>=1.23,<2
+LabJackPython>=2.1,<3
+eventcv>=1.0,<2
+opencv-python>=5.0,<6
+Pillow>=10,<13
