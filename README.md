@@ -2,6 +2,8 @@
 
 A controlled rotary platform for benchmarking event-based visual place recognition, integrating servo control, coordinated event-camera acquisition, visualisation and SAD-based recognition analysis across rotational speeds.
 
+[Download the final project report (PDF)](Manuals/JordanThuo_EGH490_Final_Report.pdf?raw=true).
+
 ## Start here
 
 1. [Download the Servo Test Rig Operating Manual (draft)](Manuals/Servo_controller_operating_manual_draft.docx?raw=true). Start with Section 3 for installation and configuration.
