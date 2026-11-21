@@ -1,5 +1,7 @@
 # VPR Media: prepare, inspect and compare recordings
 
+[Download the Servo Test Rig Operating Manual (Word, draft)](../Manuals/Servo_controller_operating_manual_draft.docx?raw=true). Start with Sections 6.1–6.4 for collecting files, configuring the processing environment and preparing recordings. Section 6.4.1 covers optional offline trigger extraction; Sections 6.5–6.8 cover videos, angle comparisons and output checks.
+
 This guide takes the files produced by [GUI acquisition](02_GUI_README.md), associates camera time with motor measurements, and produces inspection media. For recognition scores, continue to [SAD VPR](04_SAD_VPR_README.md).
 
 ## 1. Files and responsibilities
@@ -23,23 +25,27 @@ The lower-level CLIs have historical file defaults. Supply your own paths or use
 
 ## 2. Environment and inputs
 
-Examples below use PowerShell from `code/servo_controller`. Use the project environment containing EventCV, OpenCV and Pillow:
+Follow the [main installation workflow](01_README.md#installation-workflow) to create a fresh `.venv` and install `requirements.txt` for EventCV, OpenCV and Pillow. Run the examples in Windows Command Prompt from `code/servo_controller`. Manual Section 6.2 activates the environment before using `python`; this guide calls its Python executable directly, so activation is unnecessary. On an installed system, use the environment created during setup.
 
-```powershell
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+```cmd
+.\.venv\Scripts\python.exe -c "import sys, cv2, eventcv, PIL; print(sys.executable); print('Processing packages ready')"
 .\.venv\Scripts\python.exe vpr_media.py --help
 ```
 
 On Linux, replace `.\.venv\Scripts\python.exe` with `./.venv/bin/python` and use Linux paths. These tools import the media dependencies even for some commands that primarily inspect metadata.
 
-For every acquisition, copy the motor and camera files into one experiment folder. Keep the original filenames and shared run IDs:
+Confirm that the import check prints `Processing packages ready` and that the interpreter path points inside `.venv`.
+
+For every acquisition, retain an untouched backup and copy the motor and camera files into one experiment folder. Keep the original filenames and shared run IDs:
 
 | Input | Required for |
 |---|---|
+| Source motion-profile CSV | Retain the command schedule with the acquisition records. |
 | `*_recorded.csv` speed-profile export | Encoder samples, timing, speed and run ID. Position-profile CSVs use a different, unsupported preparation schema. |
 | `<run-id>_*.raw` | Event rendering and trigger extraction. |
 | `<run-id>_*_metadata.json` | Camera clocks, run association and recording details. |
 | Matching motor `_events.csv` / `_metadata.json` | Retain as acquisition evidence and for later rig evaluation. |
+| Matching motor `_clock_sync.csv` where available | Retain the clock exchanges associated with the recording. |
 | `<run-id>_*_0x00_writes.csv` | Trigger-based alignment. |
 | `<run-id>_*_trigger_events.csv` | Trigger-based alignment; generated from EVT3 RAW if absent. |
 
@@ -49,7 +55,7 @@ Discovery requires exactly one RAW and one camera metadata file per motor run ID
 
 Use a working copy of a new experiment. Preparation **moves files**, regenerates setup/catalogue files and can update copied camera metadata. It is not an atomic operation and also organises excluded runs. Do not rerun it on accepted analysis inputs merely to remove an alignment warning.
 
-```powershell
+```cmd
 .\.venv\Scripts\python.exe vpr_media.py prepare-experiment --folder "..\Experiments\Low-Speed"
 ```
 
@@ -63,7 +69,7 @@ The first pass creates `experiment_setup.csv` and organises the acquisitions. Ru
 | `run_id` and file paths | Generated linkage; preserve the acquisition identity. Setup paths are relative to the experiment folder. |
 | `manual_evk4_motion_s` | Manual mode: visible motion onset in Studio recording-relative seconds. |
 | `studio_duration_s` | Duration of this exact RAW recording as reported by Studio. Needed for media and trigger alignment. |
-| `nominal_speed_rpm` | Descriptive experiment metadata; verify your motor/platform convention. The SAD study defines its nominal platform speeds separately. |
+| `nominal_speed_rpm` | Nominal motor speed in rpm, following manual Section 6.4. Check any inferred value against the source profile. The SAD study defines nominal platform speeds separately. |
 | `vertical_condition`, `notes` | Optional description of the acquisition. |
 
 Run the same preparation command again after completing the setup. Read all messages and check that each intended run is marked ready; a created catalogue does not mean every acquisition was admitted.
@@ -90,17 +96,27 @@ Catalogue paths resolve relative to `outputs/`, not the setup CSV. Copy the orga
 
 `--timing-uncertainty-ms` defaults to `100` for preparation. This is a provisional annotation for manual mapping, not a measured accuracy. Set it from your own assessment. Trigger preparation instead records its fit diagnostic. Manual bins cover the encoder-supported portion; trigger/recording-start mappings can extend labels to recording edges.
 
+### Optional offline trigger extraction
+
+Manual Section 6.4.1 provides an alternative for extracting trigger timestamps before preparation. On the LattePanda, open Command Prompt in the desktop folder containing the responder and the SDK-compatible `.venv-camera` environment configured in the manual. Replace the example paths with your recording and output paths.
+
+```cmd
+.venv-camera\Scripts\python.exe lattepanda_clock_responder.py --extract-trigger-events "C:\EVK4\recordings\<run-id>_<timestamp>.raw"
+```
+
+To select another output path, append `--trigger-events-output "C:\EVK4\recordings\<run-id>_<timestamp>_trigger_events.csv"`. The output directory must exist and the extractor refuses to overwrite an existing CSV. Retain the run-ID prefix and `_trigger_events.csv` suffix, and keep one matching trigger CSV per run for automatic discovery. Copy it with the camera files before preparation. A zero event count means no Trigger In events were decoded. Continue with trigger matching and fit checks during preparation.
+
 ## 4. Preview RAW before alignment
 
 This command does not need prepared time bins. Replace the example RAW filename and duration with values from your recording:
 
-```powershell
+```cmd
 .\.venv\Scripts\python.exe raw_timing_preview.py --raw "..\Experiments\trial.raw" --studio-duration-s 31.76 --output "..\Experiments\trial_preview.mp4" --start-s 0 --end-s 5
 ```
 
 Once a setup CSV contains the recording path and duration, select its run instead:
 
-```powershell
+```cmd
 .\.venv\Scripts\python.exe raw_timing_preview.py --setup "..\Experiments\Low-Speed\experiment_setup.csv" --run run1 --output "..\Experiments\Low-Speed\preview_run1.mp4"
 ```
 
@@ -110,8 +126,8 @@ With Studio duration, recording zero is estimated from the last RAW timestamp mi
 
 Global `vpr_media.py` options such as `--catalog` and `--output-root` go **before the subcommand**. The following examples use the same experiment and output directory:
 
-```powershell
-.\.venv\Scripts\python.exe vpr_media.py --catalog "..\Experiments\Low-Speed\outputs\vpr_runs.csv" --output-root "..\Experiments\Low-Speed\media" run-video --run run1 --accumulation-ms 2 --source-fps 100 --speed 0.3
+```cmd
+.\.venv\Scripts\python.exe vpr_media.py --catalog "..\Experiments\Low-Speed\outputs\vpr_runs.csv" --output-root "..\Experiments\Low-Speed\outputs\vpr" run-video --run run1 --accumulation-ms 2 --source-fps 100 --speed 0.3
 ```
 
 To restrict the video, append either `--start-s 5 --end-s 10` or `--start-rev 1 --end-rev 1`. Times are seconds from camera recording zero; revolution bounds are zero-based and inclusive. Do not combine time and revolution bounds.
@@ -128,16 +144,16 @@ White pixels are ON events and blue pixels are OFF events. In the current render
 
 First index an angle. This writes its reference CSV and available principal-frame PNGs:
 
-```powershell
-.\.venv\Scripts\python.exe vpr_media.py --catalog "..\Experiments\Low-Speed\outputs\vpr_runs.csv" --output-root "..\Experiments\Low-Speed\media" query-angle 120 --runs run1 run2 run3 --accumulation-ms 2
+```cmd
+.\.venv\Scripts\python.exe vpr_media.py --catalog "..\Experiments\Low-Speed\outputs\vpr_runs.csv" --output-root "..\Experiments\Low-Speed\outputs\vpr" query-angle 120 --runs run1 run2 run3 --accumulation-ms 2
 ```
 
 Then make an MP4 or GIF from that index, keeping the same angle and output root:
 
-```powershell
-.\.venv\Scripts\python.exe vpr_media.py --catalog "..\Experiments\Low-Speed\outputs\vpr_runs.csv" --output-root "..\Experiments\Low-Speed\media" compare-angle 120 --format video --instances run1:1 run2:1 run3:1 --window-ms 30 --speed 0.1
+```cmd
+.\.venv\Scripts\python.exe vpr_media.py --catalog "..\Experiments\Low-Speed\outputs\vpr_runs.csv" --output-root "..\Experiments\Low-Speed\outputs\vpr" compare-angle 120 --format video --instances run1:1 run2:1 run3:1 --window-ms 30 --speed 0.1
 
-.\.venv\Scripts\python.exe vpr_media.py --catalog "..\Experiments\Low-Speed\outputs\vpr_runs.csv" --output-root "..\Experiments\Low-Speed\media" compare-angle 120 --format gif --instances run1:1 run2:1 run3:1 --window-ms 30 --speed 0.1
+.\.venv\Scripts\python.exe vpr_media.py --catalog "..\Experiments\Low-Speed\outputs\vpr_runs.csv" --output-root "..\Experiments\Low-Speed\outputs\vpr" compare-angle 120 --format gif --instances run1:1 run2:1 run3:1 --window-ms 30 --speed 0.1
 ```
 
 `run1:1` means run label `run1`, revolution 1. Inspect available instances in the reference CSV before selecting them. `--window-ms` controls the comparison clip around the indexed crossing; it is distinct from the accumulation duration set when querying the angle.
@@ -148,14 +164,14 @@ Principal frames are quantised to the source-fps grid and represent a finite eve
 
 Check available steady turns first:
 
-```powershell
+```cmd
 .\.venv\Scripts\python.exe steady_revolutions.py --catalog "..\Experiments\Low-Speed\outputs\vpr_runs.csv" --runs run1 run2 run3
 ```
 
 Choose valid instances from that output:
 
-```powershell
-.\.venv\Scripts\python.exe vpr_media.py --catalog "..\Experiments\Low-Speed\outputs\vpr_runs.csv" --output-root "..\Experiments\Low-Speed\media" compare-runs-by-angle --instances run1:1 run2:1 run3:1 --angle-step 0.5 --accumulation-ms 2 --fps 30
+```cmd
+.\.venv\Scripts\python.exe vpr_media.py --catalog "..\Experiments\Low-Speed\outputs\vpr_runs.csv" --output-root "..\Experiments\Low-Speed\outputs\vpr" compare-runs-by-angle --instances run1:1 run2:1 run3:1 --angle-step 0.5 --accumulation-ms 2 --fps 30
 ```
 
 Use `--start-angle 30 --end-angle 150` for a partial arc; the upper bound is exclusive. This aligns displayed angle, not elapsed time. Two or three instances are supported. Cross-speed comparisons need a combined catalogue with distinct labels and correct paths.
@@ -164,7 +180,7 @@ Use `--start-angle 30 --end-angle 150` for a partial arc; the upper bound is exc
 
 Use `add-run` when valid motor/time-bin files already exist and you want a catalogue without reorganising the acquisition:
 
-```powershell
+```cmd
 .\.venv\Scripts\python.exe vpr_media.py --catalog "..\Experiments\combined_runs.csv" add-run --label low_run1 --recorded "..\Experiments\Low-Speed\runs\run1\trial_recorded.csv" --time-bins "..\Experiments\Low-Speed\outputs\time_bins\run1_time_bins.csv" --raw "..\Experiments\Low-Speed\raw\trial.raw" --studio-duration 31.76
 ```
 
@@ -175,7 +191,7 @@ Replace example filenames and duration with the real files. The RAW filename mus
 | Output | Use |
 |---|---|
 | `outputs/vpr_runs.csv` and `outputs/time_bins/` | Inputs to later media and SAD workflows. |
-| `media/angles/<angle>/..._reference.csv` | Index of angle instances, crossing/frame times and file paths. |
+| `outputs/vpr/angles/<angle>/..._reference.csv` | Index of angle instances, crossing/frame times and file paths. |
 | Principal-frame PNGs | Visual checks of matched scene content. |
 | MP4/GIF files | Presentations and qualitative comparisons. RAW previews also write a matching `_frames.csv` timing record. |
 | Trigger-fit CSVs | Diagnose edge correspondence and clock fitting. |

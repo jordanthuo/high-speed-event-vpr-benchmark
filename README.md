@@ -4,6 +4,9 @@ A controlled rotary platform for benchmarking event-based visual place recogniti
 
 ## Start here
 
+1. [Download the Servo Test Rig Operating Manual (draft)](Manuals/Servo_controller_operating_manual_draft.docx?raw=true). Start with Section 3 for installation and configuration.
+2. Follow the [installation workflow](servo_controller/01_README.md#installation-workflow) for Windows or Linux, then choose the guide for your task.
+
 | Guide | Contents |
 |---|---|
 | [01 Repository guide](servo_controller/01_README.md) | Folder structure, workflow and testing instructions. |

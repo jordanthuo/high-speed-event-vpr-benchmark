@@ -1,6 +1,8 @@
 # GUI and coordinated recording
 
-Use this guide to run the Motor-PC interface and the LattePanda camera service. Start with [the folder map](01_README.md) if you are unfamiliar with the project.
+[Download the Servo Test Rig Operating Manual (Word, draft)](../Manuals/Servo_controller_operating_manual_draft.docx?raw=true). Start with Section 3 for installation and configuration, including Section 3.5 for the LattePanda network and camera service. Use Section 4 for startup, Section 5 for GUI operation and coordinated runs, Section 6.1 for collecting run files, and Section 7 for shutdown.
+
+Use this guide as a quick reference for the Motor PC and LattePanda. See the [repository guide](01_README.md) for the folder map and installation commands.
 
 ## 1. What runs where
 
@@ -14,23 +16,18 @@ The Motor PC talks to the servo drive over Modbus RTU and to the LattePanda over
 
 ## 2. Install and launch the GUI
 
-Run these PowerShell commands from `code/servo_controller`. Create the environment only if `.venv` does not already exist:
-
-```powershell
-python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
-```
+Follow the [main installation workflow](01_README.md#installation-workflow) to create a fresh `.venv` and install `requirements.txt`. Run the launch commands below in Windows Command Prompt from `code/servo_controller`.
 
 Windows Python must include Tk. Live drive access also needs the USB-to-RS485 driver; the optional LabJack needs its native driver. Metavision is installed separately on the LattePanda.
 
-```powershell
-# Open the simulator and connect it automatically.
+```cmd
+REM Open the simulator and connect it automatically.
 .\.venv\Scripts\python.exe app.py --simulate
 
-# Open the simulator directly on the Tests page.
+REM Open the simulator directly on the Tests page.
 .\.venv\Scripts\python.exe app.py --simulate --page Tests
 
-# Open normally; choose the connection mode in the interface.
+REM Open normally; choose the connection mode in the interface.
 .\.venv\Scripts\python.exe app.py
 ```
 
@@ -68,20 +65,20 @@ For physical operation, check the commissioned direction, clearance, protection 
 
 Copy `lattepanda_clock_responder.py` to the LattePanda. It is standalone and does not need the `servo_control/` package. Use the Python environment configured for the Metavision SDK, install `pyserial` there, and close Metavision Studio before opening the camera.
 
-The following paths are examples; replace them with the deployed bias file and recording directory:
+Open Command Prompt on the LattePanda desktop, where the manual places the responder and its separate `.venv-camera` environment. Use the SDK-compatible Python configured in manual Section 3.5. If deployed elsewhere, replace the interpreter, bias-file and recording-directory paths below with their actual locations:
 
-```powershell
-python -m pip install pyserial
-python lattepanda_clock_responder.py --help
+```cmd
+.venv-camera\Scripts\python.exe -m pip install pyserial
+.venv-camera\Scripts\python.exe lattepanda_clock_responder.py --help
 
-# Camera-only recording check; no servo commands are sent.
-python lattepanda_clock_responder.py --camera-test-seconds 5 --bias-file "C:\EVK4\test.bias" --recordings-dir "C:\EVK4\recordings"
+REM Camera-only recording check; no servo commands are sent.
+.venv-camera\Scripts\python.exe lattepanda_clock_responder.py --camera-test-seconds 5 --bias-file "C:\EVK4\test.bias" --recordings-dir "C:\EVK4\recordings"
 
-# Camera plus UART-trigger check; no servo commands are sent.
-python lattepanda_clock_responder.py --trigger-test-seconds 5 --bias-file "C:\EVK4\test.bias" --recordings-dir "C:\EVK4\recordings" --serial COM1
+REM Camera plus UART-trigger check; no servo commands are sent.
+.venv-camera\Scripts\python.exe lattepanda_clock_responder.py --trigger-test-seconds 5 --bias-file "C:\EVK4\test.bias" --recordings-dir "C:\EVK4\recordings" --serial COM1
 
-# Start the recording/clock/coordinator service.
-python lattepanda_clock_responder.py --camera-recording --trigger --bias-file "C:\EVK4\test.bias" --recordings-dir "C:\EVK4\recordings" --serial COM1
+REM Start the recording/clock/coordinator service.
+.venv-camera\Scripts\python.exe lattepanda_clock_responder.py --camera-recording --trigger --bias-file "C:\EVK4\test.bias" --recordings-dir "C:\EVK4\recordings" --serial COM1
 ```
 
 The service opens the EVK4 and COM1 at startup, applies the biases and enables MAIN Trigger In. Allow the three UDP ports through the relevant firewall. Open test recordings in Studio to check them, then close Studio before restarting the service.
@@ -137,6 +134,7 @@ The Motor PC monitors the camera coordinator. The LattePanda watchdog finalizes 
 | Beside the imported profile | `<profile>_<timestamp>_recorded.csv` | Motor feedback, timing and optional scene measurements. |
 | Same location | `<recorded-stem>_events.csv` | Motor-PC command/release and coordination events. |
 | Same location | `<recorded-stem>_metadata.json` | Run ID, source profile, clock mapping, application build and remote finalization information. |
+| Same location | `<recorded-stem>_clock_sync.csv` | Clock exchanges around the recording window, exported when valid synchronization samples are available. Retain it with the run files. |
 | LattePanda recording directory | `<run-id>_<timestamp>.raw` | Camera events. |
 | Same directory | `<run-id>_<timestamp>_0x00_writes.csv` | UART attempts, sequence numbers, deadlines, durations and outcomes. |
 | Same directory | `<run-id>_<timestamp>_metadata.json` | Camera session times, applied biases and file association. |
@@ -188,7 +186,7 @@ These are imported modules, not scripts to launch individually:
 | Cannot connect to drive | COM port, slave, baud/parity/stop bits, USB driver and other software holding the port. |
 | Start remains unavailable | Drive readiness, SON, EMGS, alarm state, monitor selection, zero feedback, staged profile and fresh clock exchanges. |
 | Camera service fails at startup | Metavision environment, bias-file path, Studio still open, camera/COM1 access and free disk space. |
-| Coordinator does not respond | Configured host and UDP ports 49152-49154; network/firewall configuration. |
+| Coordinator does not respond | Configured host and UDP ports 49152-49154; network/firewall configuration. Ensure the LattePanda is powered on and connected to the same network               |
 | Recording is incomplete | Both computers' sidecars, remote finalization state, camera health and available storage. |
 | GUI exception | Inspect the regenerated `servo_gui_crash.log` beside `app.py`. |
 

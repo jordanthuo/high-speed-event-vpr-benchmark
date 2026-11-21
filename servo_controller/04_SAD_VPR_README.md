@@ -42,10 +42,9 @@ The modules in `rig_vpr/` are imported helpers, not separate commands. Shared ti
 
 ## 2. Environment and paths
 
-Commands below use Bash from `code/servo_controller`, with a working Linux EventCV environment. On Windows, use `.\.venv\Scripts\python.exe`, PowerShell paths and PowerShell continuation syntax instead of Bash backslashes.
+Follow the [main installation workflow](01_README.md#installation-workflow) to create a fresh `.venv` using the offline SAD setup. The examples use Bash from `code/servo_controller`. In Windows Command Prompt, use `.\.venv\Scripts\python.exe` and Windows paths, replace Bash continuations (`\`) with `^`, and define path variables with `set "NAME=value"` and expand them with `%NAME%`.
 
 ```bash
-./.venv/bin/python -m pip install -r requirements-vpr.txt
 ./.venv/bin/python sad_vpr.py --help
 
 # Reuse these paths in the examples below; change them for your deployment.
