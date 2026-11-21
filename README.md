@@ -22,7 +22,9 @@ A controlled rotary platform for benchmarking event-based visual place recogniti
 
 - `servo_controller/`: application, camera service, processing scripts, tests and workflow guides.
 - `Scenes/`: eight fixed-size printable pi target images. Other target variants are not bundled here.
-- `Manuals/`: the project operating manual, currently labelled as a draft.
+- `Manuals/`: the draft operating manual and final project report.
+- [Photos/](Photos/): hardware photographs, annotated platform views, GUI screenshots and historical CAD views.
+- [BOM.xlsx](BOM.xlsx): project bill of materials.
 - `Experiments/`: the folder guide only. Recordings, caches and generated results are not included in Git.
 
 Run application commands from `servo_controller/` using the appropriate Python environment. Local settings, credentials, virtual environments and logs are excluded by `.gitignore`.
