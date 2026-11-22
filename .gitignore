@@ -6,7 +6,6 @@ __pycache__/
 .pytest_cache/
 
 # Local credentials and environment configuration
-AnyDesk Password.txt
 .env
 .env.*
 !.env.example
